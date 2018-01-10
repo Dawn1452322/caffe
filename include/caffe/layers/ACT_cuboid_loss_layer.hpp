@@ -34,7 +34,7 @@ class ACTCuboidLossLayer : public LossLayer<Dtype> {
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "MultiBoxLoss"; }
+  virtual inline const char* type() const { return "ACTCuboidLoss"; }
   // bottom[0] stores the location predictions.
   // bottom[1] stores the confidence predictions.
   // bottom[2] stores the anchor cuboids.
