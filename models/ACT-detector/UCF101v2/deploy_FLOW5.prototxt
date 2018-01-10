@@ -38,9 +38,9 @@ input_shape {
 input_shape {
   dim: 1
   dim: 15
+  dim: 
   dim: 300
-  dim: 300
-}
+
 layer {
   name: "conv1_1_stream0flow"
   type: "Convolution"
@@ -6093,7 +6093,7 @@ layer {
   }
   act_detection_output_param {
     sequence_length: 6
-    save_full: True
+    save_full: true
   }
 }
 
