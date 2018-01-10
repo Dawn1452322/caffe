@@ -5,9 +5,7 @@ import cPickle as pickle
 from PIL import Image
 
 CAFFE_PATH = os.path.dirname(os.path.dirname(__file__))
-ROOT_DATASET_PATH = "/path/to/datasets/"  # CHANGEME
-# If you use the ACT-detector scripts to download the action localization datasets, for instance UCF-Sports:
-# ROOT_DATASET_PATH = CAFFE_PATH + "/data/UCFSports/"
+ROOT_DATASET_PATH = CAFFE_PATH + "/data/"
 
 class TubeDataset(object):
     """
@@ -22,20 +20,24 @@ class TubeDataset(object):
         gttubes: dictionary that contains the gt tubes for each video. Gttubes are dictionary that associates from each index of label, a list of tubes. A tube is a numpy array with nframes rows and 5 columns, <frame number> <x1> <y1> <x2> <y2>.
     """
     def __init__(self, dname, split=1):
+        #若数据集不属于UCFSports, JMDB, UCF101, 则显示“Unknown dataset name"
         assert dname in ['UCFSports','JHMDB','UCF101'], "Unknown dataset name"
         self.NAME = dname
         self.SPLIT = split
-
+        
+        #----------加载pkl文件----------#
         cache_file = os.path.join(CAFFE_PATH, 'cache', dname + '-GT.pkl')
         assert os.path.isfile(cache_file), "Missing cache file for dataset " + dname
-
         with open(cache_file, 'rb') as fid:
             cache = pickle.load(fid)
-
+        #------------------------------#
+        
+        #使用pkl文件中的内容给TubeDataset类的属性赋值
+        #该类属性命名分别为：labels, _train_videos, _test_videos, _nframes, _resolution, _gttubes（对应pkl字典的各个key）
         for k in cache:
             setattr(self, ('_' if k != 'labels' else '') + k, cache[k])
 
-    @property
+    @property #property装饰器把方法变成属性调用
     def nlabels(self):
         return len(self.labels)
 
@@ -53,7 +55,8 @@ class TubeDataset(object):
 
     def gttubes(self, v):
         return self._gttubes[v]
-
+    
+    #----------NotImplementedError表示该方法预留给子类实现，若子类也未实现，则调用该方法时会报错----------#
     def imfile(self, v, i):
         raise NotImplementedError("TubeDataset is an abstract class, method imfile not implemented")
 
@@ -62,6 +65,7 @@ class TubeDataset(object):
 
     def frame_format(self, v, i):
         raise NotImplementedError("TubeDataset is an abstract class, method frame_format not implemented")
+    #-------------------------------------------------------------------------------------------#
 
 
 class UCFSports(TubeDataset):
