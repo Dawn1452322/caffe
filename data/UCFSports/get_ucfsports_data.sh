@@ -5,6 +5,7 @@ cd $DIR
 
 DATASET_NAME="UCFSports"
 
+#declare -a 声明变量为数组
 declare -a RGB_FLOW_NAMES=("Frames" "OF")
 RGBFLOW="${RGB_FLOW_NAMES[$1]}"
 
@@ -15,9 +16,9 @@ FILE=$DATASET_NAME"-"$RGBFLOW".tar.gz"
 
 if [ -f $FILE ]; then
   echo "File already exists. Checking md5..."
-  os=`uname -s`
+  os=`uname -s` #打印内核名称
   if [ "$os" = "Linux" ]; then
-    checksum=`md5sum $FILE | awk '{ print $1 }'`
+    checksum=`md5sum $FILE | awk '{ print $1 }'` #获取该已存在的目标文件的md5值
   elif [ "$os" = "Darwin" ]; then
     checksum=`cat $FILE | md5`
   fi
