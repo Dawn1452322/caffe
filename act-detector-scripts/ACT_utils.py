@@ -10,6 +10,7 @@ import numpy as np
 
 def area2d(b):
     """Compute the areas for a set of 2D boxes"""
+    #----------计算一组box各自的区域面积----------#
 
     return (b[:,2]-b[:,0]+1) * (b[:,3]-b[:,1]+1)
 
@@ -27,7 +28,7 @@ def overlap2d(b1, b2):
     return width * height
 
 def iou2d(b1, b2):
-    """Compute the IoU between a set of boxes b1 and 1 box b2"""
+    """Compute the IoU between a set of boxes b1 and one box b2"""
 
     if b1.ndim == 1: b1 = b1[None, :]
     if b2.ndim == 1: b2 = b2[None, :]
