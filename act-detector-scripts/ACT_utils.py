@@ -8,12 +8,13 @@ import numpy as np
 ### BOXES
 """ boxes are represented as a numpy array with 4 columns corresponding to the coordinates (x1, y1, x2, y2)"""
 
+#----------计算一组box各自的区域面积----------#
 def area2d(b):
     """Compute the areas for a set of 2D boxes"""
-    #----------计算一组box各自的区域面积----------#
-
+    
     return (b[:,2]-b[:,0]+1) * (b[:,3]-b[:,1]+1)
 
+#----------计算一个box与一组box的重叠区域的面积----------#
 def overlap2d(b1, b2):
     """Compute the overlaps between a set of boxes b1 and one box b2"""
 
@@ -27,6 +28,7 @@ def overlap2d(b1, b2):
 
     return width * height
 
+#----------计算一个box与一组box的重叠度----------#
 def iou2d(b1, b2):
     """Compute the IoU between a set of boxes b1 and one box b2"""
 
@@ -39,7 +41,7 @@ def iou2d(b1, b2):
 
     return ov / (area2d(b1) + area2d(b2) - ov)
 
-
+#----------使用非极大值抑制的方法筛选掉多余的bounding box----------#
 def nms2d(boxes, overlap=0.3):
     """Compute the nms given a set of scored boxes,
     as numpy array with 5 columns <x1> <y1> <x2> <y2> <score>
