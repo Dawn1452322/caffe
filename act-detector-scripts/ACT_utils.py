@@ -43,7 +43,7 @@ def iou2d(b1, b2):
 def nms2d(boxes, overlap=0.3):
     """Compute the nms given a set of scored boxes,
     as numpy array with 5 columns <x1> <y1> <x2> <y2> <score>
-    return the indices of the tubelets to keep
+    return the indices of the boxes to keep
     """
 
     if boxes.size == 0:
@@ -56,12 +56,12 @@ def nms2d(boxes, overlap=0.3):
 
     scores = boxes[:, 4]
     areas = (x2-x1+1) * (y2-y1+1)
-    I = np.argsort(scores)
-    indices = np.zeros(scores.shape, dtype=np.int32)
+    I = np.argsort(scores) #返回数组值从小到大的索引值
+    indices = np.zeros(scores.shape, dtype=np.int32) #对输出的索引数组进行0初始化
 
     counter = 0
     while I.size > 0:
-        i = I[-1]
+        i = I[-1] #取最大score值对应的索引
         indices[counter] = i
         counter += 1
 
@@ -72,9 +72,9 @@ def nms2d(boxes, overlap=0.3):
 
         inter = np.maximum(0.0, xx2 - xx1 + 1) * np.maximum(0.0, yy2 - yy1 + 1)
         iou = inter / (areas[i] + areas[I[:-1]] - inter)
-        I = I[np.where(iou <= overlap)[0]]
+        I = I[np.where(iou <= overlap)[0]] #保留与具有最大score值的bounding box的重叠度不大于0.3的box
 
-    return indices[:counter]
+    return indices[:counter] #返回被保留下来的bounding box的索引
 
 
 ### TUBELETS
