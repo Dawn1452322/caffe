@@ -10,8 +10,7 @@ from Dataset import GetDataset
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 import caffe
 
-#-----------data augmentation----------#
-
+#----------进行photometric distortions的参数----------#
 distort_params = {
     #----------亮度----------#
     'brightness_prob': 0.5,
@@ -27,7 +26,7 @@ distort_params = {
     'saturation_prob': 0.5,
     'saturation_lower': 0.5,
     'saturation_upper': 1.5,
-    #----------顺序随机概率----------#
+    
     'random_order_prob': 0.0,
 }
 
@@ -36,6 +35,7 @@ expand_params = {
     'max_expand_ratio': 4.0,
 }
 
+#----------patch sampling的参数----------#
 batch_samplers = [{
     'sampler': {},
     'max_trials': 1,
@@ -73,14 +73,19 @@ batch_samplers = [{
 },]
 
 
+#ramdom.random()表示在[0,1)上随机取值
+#random.uniform(low,high)表示从[low,high)之间随机取值
+
+#----------随机修改亮度----------#
 def random_brightness(imglist, brightness_prob, brightness_delta):
     if random.random() < brightness_prob:
-        brig = random.uniform(-brightness_delta, brightness_delta)
+        brig = random.uniform(-brightness_delta, brightness_delta) 
         for i in xrange(len(imglist)):
             imglist[i] += brig
 
     return imglist
 
+#----------随机修改对比度----------#
 def random_contrast(imglist, contrast_prob, contrast_lower, contrast_upper):
     if random.random() < contrast_prob:
         cont = random.uniform(contrast_lower, contrast_upper)
@@ -89,6 +94,7 @@ def random_contrast(imglist, contrast_prob, contrast_lower, contrast_upper):
 
     return imglist
 
+#----------随机修改饱和度----------#
 def random_saturation(imglist, saturation_prob, saturation_lower, saturation_upper):
     if random.random() < saturation_prob:
         satu = random.uniform(saturation_lower, saturation_upper)
@@ -99,6 +105,7 @@ def random_saturation(imglist, saturation_prob, saturation_lower, saturation_upp
 
     return imglist
 
+#----------随机修改色调----------#
 def random_hue(imglist, hue_prob, hue_delta):
     if random.random() < hue_prob:
         hue = random.uniform(-hue_delta, hue_delta)
@@ -109,6 +116,7 @@ def random_hue(imglist, hue_prob, hue_delta):
 
     return imglist
 
+#----------对imglist进行photometric distortions----------#
 def apply_distort(imglist, distort_param):
     out_imglist = imglist
 
@@ -126,7 +134,6 @@ def apply_distort(imglist, distort_param):
         out_imglist = random_contrast(out_imglist, distort_param['contrast_prob'], distort_param['contrast_lower'], distort_param['contrast_upper'])
 
     return out_imglist
-
 
 def apply_expand(imglist, tubes, expand_param, mean_values=None):
     # Tubes: dict of label -> list of tubes with tubes being <x1> <y1> <x2> <y2>
@@ -244,7 +251,6 @@ def crop_image(imglist, tubes, batch_samplers):
             out_tubes[ilabel].append(t)
 
     return imglist, out_tubes
-#-------------------------------------#
 
 # Assisting function for finding a good/bad tubelet
 def tubelet_in_tube(tube, i, K):
