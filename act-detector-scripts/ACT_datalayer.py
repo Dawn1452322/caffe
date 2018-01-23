@@ -10,18 +10,24 @@ from Dataset import GetDataset
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 import caffe
 
+#-----------data augmentation----------#
 
 distort_params = {
+    #----------亮度----------#
     'brightness_prob': 0.5,
     'brightness_delta': 32,
+    #----------对比度----------#
     'contrast_prob': 0.5,
     'contrast_lower': 0.5,
     'contrast_upper': 1.5,
+    #----------色调----------#
     'hue_prob': 0.5,
     'hue_delta': 18,
+    #----------饱和度----------#
     'saturation_prob': 0.5,
     'saturation_lower': 0.5,
     'saturation_upper': 1.5,
+    #----------顺序随机概率----------#
     'random_order_prob': 0.0,
 }
 
@@ -238,7 +244,7 @@ def crop_image(imglist, tubes, batch_samplers):
             out_tubes[ilabel].append(t)
 
     return imglist, out_tubes
-
+#-------------------------------------#
 
 # Assisting function for finding a good/bad tubelet
 def tubelet_in_tube(tube, i, K):
