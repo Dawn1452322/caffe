@@ -99,7 +99,7 @@ def random_saturation(imglist, saturation_prob, saturation_lower, saturation_upp
     if random.random() < saturation_prob:
         satu = random.uniform(saturation_lower, saturation_upper)
         for i in xrange(len(imglist)):
-            hsv = cv2.cvtColor(imglist[i], cv2.COLOR_BGR2HSV)
+            hsv = cv2.cvtColor(imglist[i], cv2.COLOR_BGR2HSV)
             hsv[:, :, 1] *= satu
             imglist[i] = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
@@ -135,12 +135,14 @@ def apply_distort(imglist, distort_param):
 
     return out_imglist
 
+#----------实施对小物体的数据增广(参考SSD)----------#
 def apply_expand(imglist, tubes, expand_param, mean_values=None):
     # Tubes: dict of label -> list of tubes with tubes being <x1> <y1> <x2> <y2>
     out_imglist = imglist
     out_tubes = tubes
 
     if random.random() < expand_param['expand_prob']:
+        #----------对小物体的数据增广方法(参考SSD)----------#
         expand_ratio = random.uniform(1, expand_param['max_expand_ratio'])
         oh,ow = imglist[0].shape[:2]
         h = int(oh * expand_ratio)
@@ -153,10 +155,13 @@ def apply_expand(imglist, tubes, expand_param, mean_values=None):
                 out_imglist[i] += np.array(mean_values).reshape(1, 1, 3)
         for i in xrange(len(imglist)):
             out_imglist[i][h_off:h_off+oh, w_off:w_off+ow, :] = imglist[i]
+        #-----------------------------------------------#
         # project boxes
+        #----------增广之后，相应的tube的位置要进行修改----------#
         for ilabel in tubes:
             for itube in xrange(len(tubes[ilabel])):
                 out_tubes[ilabel][itube] += np.array([[w_off, h_off, w_off, h_off]], dtype=np.float32)
+        #---------------------------------------------------#
 
     return out_imglist, out_tubes
 
