@@ -10,19 +10,19 @@ from Dataset import GetDataset
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'python'))
 import caffe
 
-#----------进行photometric distortions的参数----------#
+#进行photometric distortions的参数
 distort_params = {
-    #----------亮度----------#
+    #亮度
     'brightness_prob': 0.5,
     'brightness_delta': 32,
-    #----------对比度----------#
+    #对比度
     'contrast_prob': 0.5,
     'contrast_lower': 0.5,
     'contrast_upper': 1.5,
-    #----------色调----------#
+    #色调
     'hue_prob': 0.5,
     'hue_delta': 18,
-    #----------饱和度----------#
+    #饱和度
     'saturation_prob': 0.5,
     'saturation_lower': 0.5,
     'saturation_upper': 1.5,
@@ -35,7 +35,7 @@ expand_params = {
     'max_expand_ratio': 4.0,
 }
 
-#----------patch sampling的参数----------#
+#采样用的参数(参考SSD的data augmentation)
 batch_samplers = [{
     'sampler': {},
     'max_trials': 1,
@@ -76,7 +76,7 @@ batch_samplers = [{
 #ramdom.random()表示在[0,1)上随机取值
 #random.uniform(low,high)表示从[low,high)之间随机取值
 
-#----------随机修改亮度----------#
+#随机修改亮度
 def random_brightness(imglist, brightness_prob, brightness_delta):
     if random.random() < brightness_prob:
         brig = random.uniform(-brightness_delta, brightness_delta) 
@@ -85,7 +85,7 @@ def random_brightness(imglist, brightness_prob, brightness_delta):
 
     return imglist
 
-#----------随机修改对比度----------#
+#随机修改对比度
 def random_contrast(imglist, contrast_prob, contrast_lower, contrast_upper):
     if random.random() < contrast_prob:
         cont = random.uniform(contrast_lower, contrast_upper)
@@ -94,7 +94,7 @@ def random_contrast(imglist, contrast_prob, contrast_lower, contrast_upper):
 
     return imglist
 
-#----------随机修改饱和度----------#
+#随机修改饱和度
 def random_saturation(imglist, saturation_prob, saturation_lower, saturation_upper):
     if random.random() < saturation_prob:
         satu = random.uniform(saturation_lower, saturation_upper)
@@ -105,7 +105,7 @@ def random_saturation(imglist, saturation_prob, saturation_lower, saturation_upp
 
     return imglist
 
-#----------随机修改色调----------#
+#随机修改色调
 def random_hue(imglist, hue_prob, hue_delta):
     if random.random() < hue_prob:
         hue = random.uniform(-hue_delta, hue_delta)
@@ -116,7 +116,7 @@ def random_hue(imglist, hue_prob, hue_delta):
 
     return imglist
 
-#----------对imglist进行photometric distortions----------#
+#对imglist进行photometric distortions
 def apply_distort(imglist, distort_param):
     out_imglist = imglist
 
@@ -135,14 +135,14 @@ def apply_distort(imglist, distort_param):
 
     return out_imglist
 
-#----------实施对小物体的数据增广(参考SSD)----------#
+#实施对小物体的数据增广(参考SSD)
 def apply_expand(imglist, tubes, expand_param, mean_values=None):
     # Tubes: dict of label -> list of tubes with tubes being <x1> <y1> <x2> <y2>
     out_imglist = imglist
     out_tubes = tubes
 
     if random.random() < expand_param['expand_prob']:
-        #----------对小物体的数据增广方法(参考SSD)----------#
+        #对小物体的数据增广方法(参考SSD)
         expand_ratio = random.uniform(1, expand_param['max_expand_ratio'])
         oh,ow = imglist[0].shape[:2]
         h = int(oh * expand_ratio)
@@ -155,23 +155,25 @@ def apply_expand(imglist, tubes, expand_param, mean_values=None):
                 out_imglist[i] += np.array(mean_values).reshape(1, 1, 3)
         for i in xrange(len(imglist)):
             out_imglist[i][h_off:h_off+oh, w_off:w_off+ow, :] = imglist[i]
-        #-----------------------------------------------#
+    
         # project boxes
-        #----------增广之后，相应的tube的位置要进行修改----------#
+        #增广之后，相应的tube的位置要进行修改#
         for ilabel in tubes:
             for itube in xrange(len(tubes[ilabel])):
                 out_tubes[ilabel][itube] += np.array([[w_off, h_off, w_off, h_off]], dtype=np.float32)
-        #---------------------------------------------------#
 
     return out_imglist, out_tubes
 
+
+#--------------------对图像进行采样--------------------#
+#选择要采样的位置(类似SSD中对patch的选择)
 def sample_cuboids(tubes, batch_samplers, imheight, imwidth):
     sampled_cuboids = []
     for batch_sampler in batch_samplers:
         max_trials = batch_sampler['max_trials']
         max_sample = batch_sampler['max_sample']
-        itrial = 0
-        isample = 0
+        itrial = 0 #表示对某种batch_sampler的实验次数
+        isample = 0 #控制是否对某种batch_sampler继续取样
         sampler = batch_sampler['sampler']
 
         min_scale = sampler['min_scale'] if 'min_scale' in sampler else 1
@@ -190,8 +192,8 @@ def sample_cuboids(tubes, batch_samplers, imheight, imwidth):
 
             # rescale the box
             sampled_cuboid = np.array([x*imwidth, y*imheight, (x+width)*imwidth, (y+height)*imheight], dtype=np.float32)
+            
             # check constraint
-
             itrial += 1
             if not 'sample_constraint' in batch_sampler:
                 sampled_cuboids.append(sampled_cuboid)
@@ -199,11 +201,16 @@ def sample_cuboids(tubes, batch_samplers, imheight, imwidth):
                 continue
 
             constraints = batch_sampler['sample_constraint']
+            #计算gt的每一个tube与sampled_cuboid的平均重叠度，ious为平均重叠度数组
             ious = np.array([np.mean(iou2d(t, sampled_cuboid)) for t in sum(tubes.values(),[])])
-            if ious.size == 0: # empty gt
+            
+            #empty gt
+            if ious.size == 0: 
                 isample += 1
                 continue
-
+            
+            #判断所采样的cuboid是否满足重叠度相关的条件
+            #cuboid只要与某一个gt tube的重叠度不小于min_jaccard_overlap，就保存下来
             if 'min_jaccard_overlap' in constraints and ious.max() >= constraints['min_jaccard_overlap']:
                 sampled_cuboids.append( sampled_cuboid )
                 isample += 1
@@ -216,22 +223,26 @@ def sample_cuboids(tubes, batch_samplers, imheight, imwidth):
 
     return sampled_cuboids
 
+#实施采样
 def crop_image(imglist, tubes, batch_samplers):
     candidate_cuboids = sample_cuboids(tubes, batch_samplers, imglist[0].shape[0], imglist[0].shape[1])
 
     if not candidate_cuboids:
         return imglist, tubes
-
+    
+    #random.choice表示随机选取内容
     crop_cuboid = random.choice(candidate_cuboids)
     x1, y1, x2, y2 = map(int, crop_cuboid.tolist())
-
+    
+    #裁剪cuboid对应在img上的位置的部分存入imglist
     for i in xrange(len(imglist)):
         imglist[i] = imglist[i][y1:y2+1, x1:x2+1, :]
 
+    #keep the overlapped part of the groudtruth tube if the center of it is in the sampled cuboid(参考SSD)
     out_tubes = {}
     wi = x2 - x1
     hi = y2 - y1
-
+    
     for ilabel in tubes:
         for itube in xrange(len(tubes[ilabel])):
             t = tubes[ilabel][itube]
@@ -248,6 +259,7 @@ def crop_image(imglist, tubes, batch_samplers):
                 out_tubes[ilabel] = []
 
             # clip box
+            #取重叠部分
             t[:, 0] = np.maximum(0, t[:, 0])
             t[:, 1] = np.maximum(0, t[:, 1])
             t[:, 2] = np.minimum(wi, t[:, 2])
@@ -256,6 +268,7 @@ def crop_image(imglist, tubes, batch_samplers):
             out_tubes[ilabel].append(t)
 
     return imglist, out_tubes
+#------------------------------------------------------#
 
 # Assisting function for finding a good/bad tubelet
 def tubelet_in_tube(tube, i, K):
