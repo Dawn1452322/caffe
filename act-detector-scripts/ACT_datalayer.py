@@ -12,19 +12,6 @@ import caffe
 
 #进行photometric distortions的参数
 distort_params = {
-    #亮度
-    'brightness_prob': 0.5,
-    'brightness_delta': 32,
-    #对比度
-    'contrast_prob': 0.5,
-    'contrast_lower': 0.5,
-    'contrast_upper': 1.5,
-    #色调
-    'hue_prob': 0.5,
-    'hue_delta': 18,
-    #饱和度
-    'saturation_prob': 0.5,
-    'saturation_lower': 0.5,
     'saturation_upper': 1.5,
     
     'random_order_prob': 0.0,
@@ -52,45 +39,7 @@ batch_samplers = [{
     'max_sample': 1,
 },{
     'sampler': {'min_scale': 0.3, 'max_scale': 1.0, 'min_aspect_ratio': 0.5, 'max_aspect_ratio': 2.0,},
-    'sample_constraint': {'min_jaccard_overlap': 0.5,},
-    'max_trials': 50,
-    'max_sample': 1,
-},{
-    'sampler': {'min_scale': 0.3, 'max_scale': 1.0, 'min_aspect_ratio': 0.5, 'max_aspect_ratio': 2.0,},
-    'sample_constraint': {'min_jaccard_overlap': 0.7,},
-    'max_trials': 50,
-    'max_sample': 1,
-},{
-    'sampler': {'min_scale': 0.3, 'max_scale': 1.0, 'min_aspect_ratio': 0.5, 'max_aspect_ratio': 2.0,},
-    'sample_constraint': {'min_jaccard_overlap': 0.9,},
-    'max_trials': 50,
-    'max_sample': 1,
-},{
-    'sampler': {'min_scale': 0.3, 'max_scale': 1.0, 'min_aspect_ratio': 0.5, 'max_aspect_ratio': 2.0,},
-    'sample_constraint': {'max_jaccard_overlap': 1.0,},
-    'max_trials': 50,
-    'max_sample': 1,
-},]
-
-
-#ramdom.random()表示在[0,1)上随机取值
-#random.uniform(low,high)表示从[low,high)之间随机取值
-
-#随机修改亮度
-def random_brightness(imglist, brightness_prob, brightness_delta):
-    if random.random() < brightness_prob:
-        brig = random.uniform(-brightness_delta, brightness_delta) 
-        for i in xrange(len(imglist)):
-            imglist[i] += brig
-
-    return imglist
-
-#随机修改对比度
-def random_contrast(imglist, contrast_prob, contrast_lower, contrast_upper):
-    if random.random() < contrast_prob:
-        cont = random.uniform(contrast_lower, contrast_upper)
-        for i in xrange(len(imglist)):
-            imglist[i] *= cont
+    'sample_constraint':
 
     return imglist
 
@@ -292,7 +241,7 @@ def tubelet_has_gt(tube_list, i, K):
     # is inside (tubelet_in_tube) at least a tube in tube_list. 
     return any([tubelet_in_tube(tube, i, K) for tube in tube_list])
 
-
+#--------------------自定义的数据层--------------------#
 class MultiframesLayer(caffe.Layer):
 
     def shuffle(self): # shuffle the list of possible starting frames
@@ -345,9 +294,8 @@ class MultiframesLayer(caffe.Layer):
         self._indices = []
         for v in d.train_vlist():
             vtubes = sum(d.gttubes(v).values(), [])
-
+            #for training, we consider only sequences of frames in which all frames contain the ground-truth action 
             self._indices += [(v,i) for i in range(1, d.nframes(v)+2-K) if tubelet_in_out_tubes(vtubes,i,K) and tubelet_has_gt(vtubes,i,K)]
-            # self._indices += [(v,i) for i in range(1, d.nframes(v)+2-K) if all([ (i in t[:,0] and i+K-1 in t[:,0]) or all([not j in t[:,0] for j in xrange(i,i+K)]) for t in vtubes]) and any([ (i in t[:,0] and i+K-1 in t[:,0]) for t in vtubes]) ]
             
         self._nseqs = len(self._indices)
 
@@ -370,6 +318,7 @@ class MultiframesLayer(caffe.Layer):
         for i in xrange(K):
             top[i].reshape(self._batch_size, 3 * self._ninput, self._resize_height, self._resize_width)
 
+        #表示label
         top[K].reshape(1, 1, 1, 8)
 
     def prepare_blob(self):
@@ -396,8 +345,10 @@ class MultiframesLayer(caffe.Layer):
                 images = [cv2.imread(d.flowfile(v, min(frame+ii, d.nframes(v)))).astype(np.float32) for ii in range(K + self._ninput - 1)]
             else:
                 images = [cv2.imread(d.imfile(v, frame+ii)).astype(np.float32) for ii in range(K)]
-
+            
+            #image的水平翻转
             if do_mirror:
+                #::-1表示将width上的元素倒序排，即水平翻转
                 images = [im[:, ::-1, :] for im in images]
                 # reverse the x component of the flow
                 if self._flow:
@@ -405,6 +356,7 @@ class MultiframesLayer(caffe.Layer):
                         images[ii][:, :, 2] = 255 - images[ii][:, :, 2]
 
             h, w = d.resolution(v)
+            #截取与images对应长度的满足条件的gt tubes存入TT
             TT = {}
             for ilabel, tubes in d.gttubes(v).iteritems():
                 for t in tubes:
@@ -412,7 +364,7 @@ class MultiframesLayer(caffe.Layer):
                         continue
 
                     assert frame + K - 1 in t[:, 0]
-
+                    #对应tube的水平翻转
                     if do_mirror:
                         # copy otherwise it will change the gt of the dataset also
                         t = t.copy()
@@ -448,8 +400,10 @@ class MultiframesLayer(caffe.Layer):
                     idxtube += 1
             self._next += 1
         self._iter += 1
-
+        
+        #数据去均值化操作
         for ii in range(K):
+            #tile()函数表示将array在对应方向上重复若干辞
             data[ii] -= np.tile(np.array(self._mean_values, dtype=np.float32)[None, :, None, None], (1, self._ninput, 1, 1))
 
         label = np.array(alltubes, dtype=np.float32)
@@ -458,7 +412,7 @@ class MultiframesLayer(caffe.Layer):
         if label.size == 0:
             label = -np.ones((1, 1, 1, 8), dtype=np.float32)
         else:
-            label = label.reshape(1, 1, -1, 8)
+            label = label.reshape(1, 1, -1, 8)#-1表示自动计算该维的大小
 
         return data + [label]
 
@@ -466,6 +420,7 @@ class MultiframesLayer(caffe.Layer):
         blobs = self.prepare_blob()
         for ii in xrange(len(top) - 1):
             top[ii].data[...] = blobs[ii].astype(np.float32, copy=False)
+        # *将元组解包
         top[len(top) - 1].reshape(*(blobs[len(top) - 1].shape))
         top[len(top) - 1].data[...] = blobs[len(top) - 1].astype(np.float32, copy=False)
 
@@ -475,4 +430,4 @@ class MultiframesLayer(caffe.Layer):
     def reshape(self, bottom, top):
         # done in the forward
         pass
-
+#------------------------------------------------------#
