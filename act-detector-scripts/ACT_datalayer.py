@@ -242,6 +242,7 @@ def tubelet_has_gt(tube_list, i, K):
     return any([tubelet_in_tube(tube, i, K) for tube in tube_list])
 
 #--------------------自定义的数据层--------------------#
+#该层没有权值，反向传播不需要进行权值的更新。如果需要定义更新自身权值的层，最好使用C++
 class MultiframesLayer(caffe.Layer):
 
     def shuffle(self): # shuffle the list of possible starting frames
@@ -253,6 +254,7 @@ class MultiframesLayer(caffe.Layer):
         self._nshuffles += 1
         self._next = 0
 
+    #在网络运行之前根据相关参数对layer进行初始化
     def setup(self, bottom, top):
         layer_params = eval(self.param_str)
 
@@ -416,17 +418,20 @@ class MultiframesLayer(caffe.Layer):
 
         return data + [label]
 
+    #网络的前向传播
     def forward(self, bottom, top):
         blobs = self.prepare_blob()
         for ii in xrange(len(top) - 1):
             top[ii].data[...] = blobs[ii].astype(np.float32, copy=False)
-        # *将元组解包
+        # *表示将元组解包
         top[len(top) - 1].reshape(*(blobs[len(top) - 1].shape))
         top[len(top) - 1].data[...] = blobs[len(top) - 1].astype(np.float32, copy=False)
 
+    #网络的后向传播
     def backward(self, bottom, propagate_down, top):
         pass
 
+    #在forward之前之前调用，根据bottom blob的尺寸调整中间变量和top blob的尺寸
     def reshape(self, bottom, top):
         # done in the forward
         pass
