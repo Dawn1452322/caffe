@@ -136,12 +136,13 @@ template <typename Dtype>
 void ACTCuboidLossLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
-  num_ = bottom[0]->num();
-  num_priors_ = bottom[2]->height() / 4;
-  num_gt_ = bottom[3]->height() / sequence_length_;
+  num_ = bottom[0]->num(); //num表示sequences的数目
+  num_priors_ = bottom[2]->height() / 4; //num_prior表示产生的prior的总数
+  num_gt_ = bottom[3]->height() / sequence_length_; 
   CHECK_EQ(bottom[0]->num(), bottom[1]->num());
+  //loc_class表示若share location，则值为1，否则值为num_class的值
   CHECK_EQ(num_priors_ * loc_classes_ * 4 * sequence_length_, bottom[0]->channels())
-      << "Number of priors must match number of location predictions.";
+        << "Number of priors must match number of location predictions.";
   CHECK_EQ(num_priors_ * num_classes_, bottom[1]->channels())
       << "Number of priors must match number of confidence predictions.";
 }
