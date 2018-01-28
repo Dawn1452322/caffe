@@ -102,11 +102,10 @@ def nms_tubelets(dets, overlapThresh=0.3, top_k=None):
     x2 = [dets[:, 4*k + 2] for k in xrange(K)]
     y2 = [dets[:, 4*k + 3] for k in xrange(K)]
 
-    # Compute the area of the bounding boxes and sort the bounding
-    # boxes by the bottom-right y-coordinate of the bounding box
+    # Compute the area of the bounding boxes and sort the tubelets by the score of each tubelet
     # area = (x2 - x1 + 1) * (y2 - y1 + 1)
     area = [(x2[k] - x1[k] + 1) * (y2[k] - y1[k] + 1) for k in xrange(K)]
-    I = np.argsort(dets[:,-1])
+    I = np.argsort(dets[:,-1]) 
     indices = np.empty(top_k, dtype=np.int32)
     counter = 0
 
@@ -116,6 +115,7 @@ def nms_tubelets(dets, overlapThresh=0.3, top_k=None):
         counter += 1
 
         # Compute overlap
+        # 两个tubelet的重叠度计算方式为: 两组bounding boxes的重叠度之和再取平均
         xx1 = [np.maximum(x1[k][i], x1[k][I[:-1]]) for k in xrange(K)]
         yy1 = [np.maximum(y1[k][i], y1[k][I[:-1]]) for k in xrange(K)]
         xx2 = [np.minimum(x2[k][i], x2[k][I[:-1]]) for k in xrange(K)]
@@ -136,16 +136,18 @@ def nms_tubelets(dets, overlapThresh=0.3, top_k=None):
 ### TUBES
 """ tubes are represented as a numpy array with nframes rows and 5 columns (frame, x1, y1, x2, y2). frame number are 1-indexed, coordinates are 0-indexed """
 
+#计算两个tube的空间重叠度
 def iou3d(b1, b2):
     """Compute the IoU between two tubes with same temporal extent"""
 
     assert b1.shape[0] == b2.shape[0]
-    assert np.all(b1[:, 0] == b2[:, 0])
+    assert np.all(b1[:, 0] == b2[:, 0]) #判断两个tube在相同的temporal extent上
 
     ov = overlap2d(b1[:,1:5],b2[:,1:5])
 
     return np.mean(ov / (area2d(b1[:, 1:5]) + area2d(b2[:, 1:5]) - ov) )
 
+#计算两个tube的时空重叠度
 def iou3dt(b1, b2, spatialonly=False):
     """Compute the spatio-temporal IoU between two tubes"""
 
@@ -187,7 +189,7 @@ def nms3dt(tubes, overlap=0.5):
 
 def pr_to_ap(pr):
     """Compute AP given precision-recall
-    pr is a Nx2 array with first row being precision and second row being recall
+    pr is a Nx2 array with first col being precision and second col being recall
     """
 
     prdif = pr[1:, 1] - pr[:-1, 1]
