@@ -108,6 +108,7 @@ def extract_tubelets(dname, gpu=-1, redo=False):
             # two forward passes, only for the last layer 
             # dets is the detections after per-class NMS and thresholding (standard)
             # dets_all contains all the scores and regressions for all tubelets 
+            # dets is from net_rgb, dets_all is from net_flo
             dets = net_rgb.forward(start='detection_out')['detection_out'][0, 0, :, 1:]
             dets_all = net_flo.forward(start='detection_out_full')['detection_out_full'][0, 0, :, 1:]
             
@@ -117,11 +118,13 @@ def extract_tubelets(dname, gpu=-1, redo=False):
 
             dets[:, 2:] *= resolution_array # network output was normalized in [0..1]
             dets[:, 0] -= 1 # label 0 was background, come back to label in [0..nlabels-1]
+            #确保bounding box不越界
             dets[:, 2::2] = np.maximum(0, np.minimum(w, dets[:, 2::2]))
             dets[:, 3::2] = np.maximum(0, np.minimum(h, dets[:, 3::2]))
 
             # parse detections with global NMS at 0.7 (top 300)
             # coordinates were normalized in [0..1]
+            #最终得到的dets_all通过global NMS只保留了300个detections
             dets_all[:, 0:4*K] *= resolution_array 
             dets_all[:, 0:4*K:2] = np.maximum(0, np.minimum(w, dets_all[:, 0:4*K:2]))
             dets_all[:, 1:4*K:2] = np.maximum(0, np.minimum(h, dets_all[:, 1:4*K:2]))
