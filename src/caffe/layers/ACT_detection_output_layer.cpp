@@ -227,7 +227,7 @@ void ACTDetectionOutputLayer<Dtype>::Forward_cpu(
     vector<int> top_shape(2, 1);
     // ACT-detector: num_priors are num_prior tubes
     top_shape.push_back(num_priors_ * num ); 
-    // ACT-detector: first is the batch index, then tube coordinates, then class scores
+    // ACT-detector: first is the index of the image in the batch, then tube coordinates, then class scores
     int ncols = 1 + 4* sequence_length_ + num_classes_; 
     top_shape.push_back(ncols); 
     top[0]->Reshape(top_shape);
