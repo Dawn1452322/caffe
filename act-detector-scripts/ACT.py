@@ -33,7 +33,7 @@ def extract_tubelets(dname, gpu=-1, redo=False):
 
     note: this version is inefficient: it is better to estimate the per-frame features once
     """
-    d = GetDataset(dname)
+    d = GetDataset(dname) #获取相应数据集
 
     if gpu >= 0:
         caffe.set_mode_gpu()
@@ -52,7 +52,7 @@ def extract_tubelets(dname, gpu=-1, redo=False):
     flo_model = os.path.join(model_dir, "FLOW5.caffemodel")
     net_flo = caffe.Net(flo_proto, caffe.TEST, weights=flo_model)
 
-    vlist = d.test_vlist()
+    vlist = d.test_vlist() #获取用于测试的数据集
     for iv, v in enumerate(vlist):
         print("Processing video {:d}/{:d}: {:s}".format( iv+1, len(vlist), v))
         h, w = d.resolution(v)
@@ -62,6 +62,7 @@ def extract_tubelets(dname, gpu=-1, redo=False):
         
         # now process each frame
         for i in xrange(1, 1 + d.nframes(v) - K + 1):
+            #保存路径为: ../result/ACT-detector/v/i.pkl
             outfile = os.path.join(output_dir, d.frame_format(v,i) + ".pkl")
             
             # skip if already computed
@@ -72,12 +73,16 @@ def extract_tubelets(dname, gpu=-1, redo=False):
             kwargs_rgb  = {}
             kwargs_flo = {}
             for j in xrange(K):
+                #处理RGB帧
+                #im一次取一张，取第i+j张
                 im = cv2.imread(d.imfile(v, i + j))
                 if im is None:
                     print "Image {:s} does not exist".format(d.imfile(v, i+j))
                     return
                 imscale = cv2.resize(im, (IMGSIZE, IMGSIZE), interpolation=cv2.INTER_LINEAR)
                 kwargs_rgb['data_stream' + str(j)] = np.transpose(imscale-MEAN, (2, 0, 1))[None, :, :, :]
+                #处理flow帧
+                #imf一次取五张，取第i+j到第i+j+NFLOWS-1张
                 imf = [cv2.imread(d.flowfile(v, min(d.nframes(v), i + j + iflow))) for iflow in xrange(NFLOWS)]
                 if np.any(imf) is None:
                     print "Flow image {:s} does not exist".format(d.flowfile(v, i+j))
@@ -93,13 +98,15 @@ def extract_tubelets(dname, gpu=-1, redo=False):
             
             # compute late fusion of rgb and flow scores (keep regression from rgb)
             # use net_rgb for standard detections, net_flo for having all boxes
+            # rgb和flow的score fusion的方式为取两者平均值
             scores = 0.5 * (net_rgb.blobs['mbox_conf_flatten'].data + net_flo.blobs['mbox_conf_flatten'].data)
             net_rgb.blobs['mbox_conf_flatten'].data[...] = scores
             net_flo.blobs['mbox_conf_flatten'].data[...] = scores
+            #这里保留来自rgb的regression
             net_flo.blobs['mbox_loc'].data[...] = net_rgb.blobs['mbox_loc'].data
             
             # two forward passes, only for the last layer 
-            # dets is the detections after per-class NMS and thresholding (stardard)
+            # dets is the detections after per-class NMS and thresholding (standard)
             # dets_all contains all the scores and regressions for all tubelets 
             dets = net_rgb.forward(start='detection_out')['detection_out'][0, 0, :, 1:]
             dets_all = net_flo.forward(start='detection_out_full')['detection_out_full'][0, 0, :, 1:]
