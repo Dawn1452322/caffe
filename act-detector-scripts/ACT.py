@@ -18,13 +18,26 @@ NFLOWS = 5
 
 def extract_tubelets(dname, gpu=-1, redo=False):
     """Extract the tubelets for a given dataset
-
     args:
         - dname: dataset name (example: 'JHMDB')
         - gpu (default -1): use gpu given in argument, or use cpu if -1
         - redo: wheter or not to recompute already computed files
+    save a pickle file for each frame
+    the file contains a tuple (dets, dets_all)
+        - dets is a numpy array with 2+4*K columns containing the tubelets starting at this frame after per-class nms at 0.45 and thresholding the scores at 0.01
+          the columns are <label> <score> and then <x1> <y1> <x2> <y2> for each of the frame in the tubelet
+        - dets_all contains the tubelets obtained after a global nms at 0.7 and thresholding the scores at 0.01
+            it is a numpy arrray with 4*K + L + 1 containing the coordinates of the tubelets and the scores for all labels
+    note: this version is inefficient: it is better to estimate the per-frame features once
+    """
+    d = GetDataset(dname)
 
-    save a pickle file for each framele__), '../results/ACT-detector/', dname)
+    if gpu >= 0:
+        caffe.set_mode_gpu()
+        caffe.set_device(gpu)
+
+    model_dir = os.path.join(os.path.dirname(__file__), '../models/ACT-detector/', dname)
+    output_dir = os.path.join(os.path.dirname(__file__), '../results/ACT-detector/', dname)
 
     
     # load the RGB network
@@ -184,7 +197,7 @@ def frameAP(dname, th=0.5, redo=False):
         vlist = d.test_vlist()
         # load per-frame detections
         alldets = load_frame_detections(d, vlist, dirname, 0.3)
-        res = {}
+        res = {} #存储最终评估结果，共有num_label个属性，每个属性对应一个pr(即：2 cols, detections.shape[0]+1 rows).
         
         # compute AP for each class
         for ilabel,label in enumerate(d.labels):
@@ -225,6 +238,8 @@ def frameAP(dname, th=0.5, redo=False):
             fp = 0 # false positives
             tp = 0 # true positives
             
+            #argsort为由小到大排序
+            #这里由于参数为负，实际是按照分数由大到小排序
             for i, j in enumerate(np.argsort(-detections[:,3])):
                 k = (int(detections[j,0]), int(detections[j,1]))
                 box = detections[j, 4:8]
@@ -247,8 +262,8 @@ def frameAP(dname, th=0.5, redo=False):
                 else:
                     fp += 1
                 
-                pr[i+1, 0] = float(tp) / float(tp + fp)
-                pr[i+1, 1] = float(tp) / float(tp + fn)
+                pr[i+1, 0] = float(tp) / float(tp + fp) #准确率precision
+                pr[i+1, 1] = float(tp) / float(tp + fn) #召回率recall
             
             res[label] = pr
         
@@ -260,8 +275,8 @@ def frameAP(dname, th=0.5, redo=False):
     ap = 100*np.array([pr_to_ap(res[label]) for label in d.labels])
     print "frameAP"
     
-    for il, _ in enumerate(d.labels):
-        print("{:20s} {:8.2f}".format('', ap[il]))
+    for il, l in enumerate(d.labels):
+        print("{:20s} {:8.2f}".format(l, ap[il]))
     
     print("{:20s} {:8.2f}".format("mAP", np.mean(ap)))
     print("")
@@ -316,12 +331,12 @@ def frameMABO(dname, redo=False):
 
                         ious = iou2d(vdets[i], gtbox)
                         BO[label].append( np.max(ious) )
-            # save file
-            with open(eval_file, 'wb') as fid:
-                pickle.dump( BO, fid)
+        # save file
+        with open(eval_file, 'wb') as fid:
+            pickle.dump( BO, fid)
 
     # print MABO results
-    ABO = {la: 100 * np.mean(np.array(BO[la])) for la in d.labels} # average best overlap
+    ABO = {la: 100 * np.mean(np.array(BO[la])) for la in d.labels} # average best overlap for each label
     
     for la in d.labels:
         print("{:20s} {:6.2f}".format(la, ABO[la]))
@@ -603,8 +618,8 @@ def videoAP(dname, th=0.5, redo=False):
     # display results
     ap = 100 * np.array([pr_to_ap(res[label]) for label in d.labels])
     print "frameAP"
-    for il, _ in enumerate(d.labels):
-        print("{:20s} {:8.2f}".format('', ap[il]))
+    for il, l in enumerate(d.labels):
+        print("{:20s} {:8.2f}".format(l, ap[il]))
 
     print("{:20s} {:8.2f}".format("mAP", np.mean(ap)))
     print("")
