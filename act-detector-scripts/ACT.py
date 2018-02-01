@@ -24,23 +24,8 @@ def extract_tubelets(dname, gpu=-1, redo=False):
         - gpu (default -1): use gpu given in argument, or use cpu if -1
         - redo: wheter or not to recompute already computed files
 
-    save a pickle file for each frame
-    the file contains a tuple (dets, dets_all)
-        - dets is a numpy array with 2+4*K columns containing the tubelets starting at this frame after per-class nms at 0.45 and thresholding the scores at 0.01
-          the columns are <label> <score> and then <x1> <y1> <x2> <y2> for each of the frame in the tubelet
-        - dets_all contains the tubelets obtained after a global nms at 0.7 and thresholding the scores at 0.01
-            it is a numpy arrray with 4*K + L + 1 containing the coordinates of the tubelets and the scores for all labels
+    save a pickle file for each framele__), '../results/ACT-detector/', dname)
 
-    note: this version is inefficient: it is better to estimate the per-frame features once
-    """
-    d = GetDataset(dname) #获取相应数据集
-
-    if gpu >= 0:
-        caffe.set_mode_gpu()
-        caffe.set_device(gpu)
-
-    model_dir = os.path.join(os.path.dirname(__file__), '../models/ACT-detector/', dname)
-    output_dir = os.path.join(os.path.dirname(__file__), '../results/ACT-detector/', dname)
     
     # load the RGB network
     rgb_proto = os.path.join(model_dir, "deploy_RGB.prototxt")
@@ -189,6 +174,7 @@ def frameAP(dname, th=0.5, redo=False):
     d = GetDataset(dname)
     dirname = os.path.join(os.path.dirname(__file__), '../results/ACT-detector/', dname)
     
+    #保存结果路径: ../results/ACT-detector/[dname]/frameAP[th].pkl
     eval_file = os.path.join(dirname, "frameAP{:g}.pkl".format(th))
     
     if os.path.isfile(eval_file) and not redo:
@@ -203,6 +189,7 @@ def frameAP(dname, th=0.5, redo=False):
         # compute AP for each class
         for ilabel,label in enumerate(d.labels):
             # detections of this class
+            # numpy array with six cols: <video_index> <frame_index> <ilabel> <score> <x1> <y1> <x2> <y2>
             detections = alldets[alldets[:, 2] == ilabel, :]
             
             # load ground-truth of this class
@@ -215,18 +202,25 @@ def frameAP(dname, th=0.5, redo=False):
                 
                 for tube in tubes[ilabel]:
                     for i in xrange(tube.shape[0]):
+                        # k表示(视频编号，帧编号)的元组
                         k = (iv, int(tube[i, 0]))
                         if not k in gt:
                             gt[k] = []
                         gt[k].append(tube[i, 1:5].tolist())
 
             for k in gt:
-                gt[k] = np.array( gt[k] )
+                gt[k] = np.array( gt[k] ) # gt的每一个元素存储的是某一视频某一帧上指定类所有的ground-truth boxes
             
             # pr will be an array containing precision-recall values
             pr = np.empty((detections.shape[0] + 1, 2), dtype=np.float32)# precision,recall
             pr[0, 0] = 1.0
             pr[0, 1] = 0.0
+            
+            #fn：实际为positive，却被预测为negative
+            #fp：实际为negative，却被预测为positive
+            #tp：实际为positive，且被预测为positive
+            #tn：实际为negative，且被预测为negative
+            #下三行为初始化
             fn = sum([g.shape[0] for g in gt.values()]) # false negatives
             fp = 0 # false positives
             tp = 0 # true positives
