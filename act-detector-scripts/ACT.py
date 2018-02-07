@@ -415,7 +415,7 @@ def BuildTubes(dname, redo=False):
 
     for iv, v in enumerate(vlist):
         print("Processing video {:d}/{:d}: {:s}".format(iv + 1, len(vlist), v))
-
+        #tube结果存储路径：../results/ACT-detector/[dname]/[v]_tubes.pkl 
         outfile = os.path.join(dirname, v + "_tubes.pkl")
         
         if os.path.isfile(outfile) and not redo:
@@ -425,7 +425,7 @@ def BuildTubes(dname, redo=False):
         nframes = d.nframes(v)
         
         # load detected tubelets
-        VDets = {}
+        VDets = {} #所有的tubelet结果
         for startframe in xrange(1, nframes + 2 - K):
             resname = os.path.join(dirname, d.frame_format(v, startframe) + '.pkl')
             
@@ -439,13 +439,14 @@ def BuildTubes(dname, redo=False):
         for ilabel in xrange(d.nlabels):
             FINISHED_TUBES = []
             CURRENT_TUBES = [] # tubes is a list of tuple (frame, lstubelets)
-
+            
+            #计算一个tube的average score
             def tubescore(tt):
                 return np.mean(np.array([tt[i][1][-1] for i in xrange(len(tt))]))
 
             for frame in xrange(1, d.nframes(v) + 2 - K):
                 # load boxes of the new frame and do nms while keeping Nkeep highest scored
-                ltubelets = VDets[frame][:,range(4*K) + [4*K + 1 + ilabel]] # Nx(4K+1) with (x1 y1 x2 y2)*K ilabel-score
+                ltubelets = VDets[frame][:,range(4*K) + [4*K + 1 + ilabel]] # Nx(4K+1) with (x1 y1 x2 y2)*K and ilabel-score
                 idx = nms_tubelets(ltubelets, 0.3, top_k=10)
                 ltubelets = ltubelets[idx,:]
                 
@@ -469,6 +470,7 @@ def BuildTubes(dname, redo=False):
                     offset = frame - last_frame
                     if offset < K:
                         nov = K - offset
+                        #计算last_tubelet与ltubelets的重叠度(计算方式为the average iou between their boxes over overlapping frames
                         ious = sum([iou2d(ltubelets[:, 4*iov:4*iov+4], last_tubelet[4*(iov+offset):4*(iov+offset+1)]) for iov in xrange(nov)])/float(nov)
                     else:
                         ious = iou2d(ltubelets[:, :4], last_tubelet[4*K-4:4*K])
@@ -476,7 +478,7 @@ def BuildTubes(dname, redo=False):
                     valid = np.where(ious >= 0.2)[0]
                     
                     if valid.size>0:
-                        # take the one with maximum score
+                        # take the tubelet with maximum score
                         idx = valid[ np.argmax(ltubelets[valid, -1])]
                         CURRENT_TUBES[it].append((frame, ltubelets[idx,:]))
                         ltubelets = np.delete(ltubelets, idx, axis=0)
@@ -490,6 +492,7 @@ def BuildTubes(dname, redo=False):
                     FINISHED_TUBES.append( CURRENT_TUBES[it][:])
                     del CURRENT_TUBES[it]
                 
+                #对于那些没有被选中的tubelet，由它们开始创建一个新tube
                 # start new tubes
                 for i in xrange(ltubelets.shape[0]):
                     CURRENT_TUBES.append([(frame,ltubelets[i,:])])
@@ -497,7 +500,7 @@ def BuildTubes(dname, redo=False):
             # all tubes are not finished
             FINISHED_TUBES += CURRENT_TUBES
 
-            # build real tubes
+            # build real tubes(temporal smoothing)
             output = []
             for t in FINISHED_TUBES:
                 score = tubescore(t)
@@ -508,7 +511,7 @@ def BuildTubes(dname, redo=False):
                 
                 beginframe = t[0][0]
                 endframe = t[-1][0]+K-1
-                length = endframe+1-beginframe
+                length = endframe+1-beginframe #计算tube的duration
                 
                 # delete tubes with short duraton
                 if length < 15:
@@ -524,7 +527,7 @@ def BuildTubes(dname, redo=False):
                         out[frame-beginframe+k, 1:5] += box[4*k:4*k+4]
                         out[frame-beginframe+k, -1] += box[-1]
                         n_per_frame[frame-beginframe+k ,0] += 1
-                out[:,1:] /= n_per_frame
+                out[:,1:] /= n_per_frame # we average the box coordinates of tubelets that pass through that frame
                 output.append((out, score))
 
             RES[ilabel] = output
