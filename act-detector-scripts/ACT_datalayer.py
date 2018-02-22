@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import os
 import random
@@ -41,6 +42,22 @@ batch_samplers = [{
     'sampler': {'min_scale': 0.3, 'max_scale': 1.0, 'min_aspect_ratio': 0.5, 'max_aspect_ratio': 2.0,},
     'sample_constraint':
 
+#随机修改亮度
+def random_brightness(imglist, brightness_prob, brightness_delta):
+    if random.random() < brightness_prob:
+        brig = random.uniform(-brightness_delta, brightness_delta)
+        for i in xrange(len(imglist)):
+            imglist[i] += brig
+
+    return imglist
+
+#随机修改对比度
+def random_contrast(imglist, contrast_prob, contrast_lower, contrast_upper):
+    if random.random() < contrast_prob:
+        cont = random.uniform(contrast_lower, contrast_upper)
+        for i in xrange(len(imglist)):
+            imglist[i] *= cont
+    
     return imglist
 
 #随机修改饱和度
