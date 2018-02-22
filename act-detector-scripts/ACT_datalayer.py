@@ -13,8 +13,16 @@ import caffe
 
 #进行photometric distortions的参数
 distort_params = {
+    'brightness_prob': 0.5,
+    'brightness_delta': 32,
+    'contrast_prob': 0.5,
+    'contrast_lower': 0.5,
+    'contrast_upper': 1.5,
+    'hue_prob': 0.5,
+    'hue_delta': 18,
+    'saturation_prob': 0.5,
+    'saturation_lower': 0.5,
     'saturation_upper': 1.5,
-    
     'random_order_prob': 0.0,
 }
 
