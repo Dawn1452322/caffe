@@ -1,4 +1,4 @@
-name: "ACTdetector_UCFSports_RGB_train"
+name: "ACTdetector_UCFSports_POSE_train"
 layer {
   name: "data"
   type: "Python"
