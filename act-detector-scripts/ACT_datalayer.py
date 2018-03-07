@@ -330,7 +330,7 @@ class MultiframesLayer(caffe.Layer):
                 lay_param = default_values[k]
             setattr(self, '_' + k, lay_param)
 
-        if not self._imtype == 1 and self._ninput > 1:
+        if not (self._imtype == 1) and self._ninput > 1:
             raise NotImplementedError("ACT-detector: Not implemented: ninput > 1 with rgb frames or pose frames")
 
         d = self._dataset
