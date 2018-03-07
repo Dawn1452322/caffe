@@ -399,7 +399,7 @@ class MultiframesLayer(caffe.Layer):
                 #::-1表示将width上的元素倒序排，即水平翻转
                 images = [im[:, ::-1, :] for im in images]
                 # reverse the x component of the flow
-                if self._flow:
+                if self._imtype==1:
                     for ii in xrange(K + self._ninput - 1):
                         images[ii][:, :, 2] = 255 - images[ii][:, :, 2]
 
