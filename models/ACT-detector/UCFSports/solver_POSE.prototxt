@@ -1,1 +1,20 @@
+train_net: "models/ACT-detector/UCFSports/train_POSE.prototxt"
+base_lr: 0.0001
+display: 10
+max_iter: 60000
+lr_policy: "multistep"
+gamma: 0.1
+momentum: 0.9
+weight_decay: 0.0005
+snapshot: 5000
+snapshot_prefix: "models/ACT-detector/UCFSports/POSE"
+solver_mode: GPU
+device_id: 1
+debug_info: false
+snapshot_after_train: true
+average_loss: 10
+stepvalue: 40000
+stepvalue: 55000
+iter_size: 1
+type: "SGD"
 
