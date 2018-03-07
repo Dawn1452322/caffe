@@ -63,6 +63,9 @@ class TubeDataset(object):
 
     def flowfile(self, v, i):
         raise NotImplementedError("TubeDataset is an abstract class, method flowfile not implemented")
+        
+    def segfile(self, v, i):
+        raise NotImplementedError("TubeDataset is an abstract class, method segfile not implemented")
 
     def frame_format(self, v, i):
         raise NotImplementedError("TubeDataset is an abstract class, method frame_format not implemented")
@@ -80,6 +83,9 @@ class UCFSports(TubeDataset):
 
     def flowfile(self, v, i):
         return os.path.join(ROOT_DATASET_PATH, "UCFSports", "FlowBrox04", v, "{:0>6}.jpg".format(i))
+    
+    def segfile(self, v, i):
+        return os.path.join(ROOT_DATASET_PATH, "UCFSports", "Poses", v, "{:0>6}.jpg".format(i))
 
     def frame_format(self, v, i):
         return os.path.join(v, "{:0>6}".format(i))
