@@ -310,6 +310,7 @@ class MultiframesLayer(caffe.Layer):
         assert self._K > 0
 
         # parse optional argument
+        # imtype=0-->RGB frame; imtype=1-->optical flow; imtype=2-->pose frame
         default_values = {
             'rand_seed': 0,
             'shuffle': True,
@@ -318,7 +319,7 @@ class MultiframesLayer(caffe.Layer):
             'resize_height': 300,
             'resize_width': 300,
             'restart_iter': 0,
-            'flow': False,
+            'imtype': 0,
             'ninput': 1,
         }
 
@@ -329,8 +330,8 @@ class MultiframesLayer(caffe.Layer):
                 lay_param = default_values[k]
             setattr(self, '_' + k, lay_param)
 
-        if not self._flow and self._ninput > 1:
-            raise NotImplementedError("ACT-detector: Not implemented: ninput > 1 with rgb frames")
+        if not self._imtype == 1 and self._ninput > 1:
+            raise NotImplementedError("ACT-detector: Not implemented: ninput > 1 with rgb frames or pose frames")
 
         d = self._dataset
         K = self._K
@@ -386,10 +387,12 @@ class MultiframesLayer(caffe.Layer):
 
             # load images and tubes and apply mirror
             images = []
-            if self._flow:
+            if self._imtype == 1:
                 images = [cv2.imread(d.flowfile(v, min(frame+ii, d.nframes(v)))).astype(np.float32) for ii in range(K + self._ninput - 1)]
-            else:
+            elif self._imtype == 0:
                 images = [cv2.imread(d.imfile(v, frame+ii)).astype(np.float32) for ii in range(K)]
+            else:
+                images = [cv2.imread(d.segfile(v, frame+ii)).astype(np.float32) for ii in range(K)]
             
             #image的水平翻转
             if do_mirror:
