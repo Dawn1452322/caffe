@@ -117,7 +117,7 @@ def extract_tubelets(dname, gpu=-1, redo=False):
             scores = (net_rgb.blobs['mbox_conf_flatten'].data + net_flo.blobs['mbox_conf_flatten'].data + net_pos.blobs['mbox_conf_flatten'].data) / 3.0
             net_rgb.blobs['mbox_conf_flatten'].data[...] = scores
             net_flo.blobs['mbox_conf_flatten'].data[...] = scores
-            net_pso.blobs['mbox_conf_flatten'].data[...] = scores
+            net_pos.blobs['mbox_conf_flatten'].data[...] = scores
             #这里保留来自rgb的regression
             net_flo.blobs['mbox_loc'].data[...] = net_rgb.blobs['mbox_loc'].data
             
