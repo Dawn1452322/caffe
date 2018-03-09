@@ -50,6 +50,11 @@ def extract_tubelets(dname, gpu=-1, redo=False):
     flo_proto = os.path.join(model_dir, "deploy_FLOW5.prototxt")
     flo_model = os.path.join(model_dir, "FLOW5.caffemodel")
     net_flo = caffe.Net(flo_proto, caffe.TEST, weights=flo_model)
+    
+    #load the POSE network
+    pos_proto = os.path.join(model_dir, "deploy_POSE.prototxt")
+    pos_model = os.path.join(model_dir, "POSE.caffemodel")
+    net_pos = caffe.Net(pos_proto, caffe.TEST, weights=pos_model)
 
     vlist = d.test_vlist() #获取用于测试的数据集
     for iv, v in enumerate(vlist):
@@ -71,6 +76,7 @@ def extract_tubelets(dname, gpu=-1, redo=False):
             # read the frames for the forward
             kwargs_rgb  = {}
             kwargs_flo = {}
+            kwargs_pos = {}
             for j in xrange(K):
                 #处理RGB帧
                 #im一次取一张，取第i+j张
@@ -89,18 +95,29 @@ def extract_tubelets(dname, gpu=-1, redo=False):
                 imscalef = [cv2.resize(im, (IMGSIZE, IMGSIZE), interpolation=cv2.INTER_LINEAR) for im in imf]
                 timscale = [np.transpose(im-MEAN, (2, 0, 1))[None, :, :, :] for im in imscalef]
                 kwargs_flo['data_stream' + str(j) + 'flow'] = np.concatenate(timscale, axis=1)
+                #处理POSE帧
+                #imp一次取一张，取第i+j张
+                imp = cv2.imread(d.segfile(v, i + j))
+                if imp is None:
+                    print "Image {:s} does not exist".format(d.segfile(v, i+j))
+                    return
+                imscalep = cv2.resize(imp, (IMGSIZE, IMGSIZE), interpolation=cv2.INTER_LINEAR)
+                kwargs_pos['data_stream' + str(j)] = np.transpose(imscalep-MEAN, (2, 0, 1))[None, :, :, :]
             
             # compute rgb and flow scores
             # two forward passes: one for the rgb and one for the flow 
             net_rgb.forward(end="mbox_conf_flatten", **kwargs_rgb) # forward of rgb with confidence and regression
             net_flo.forward(end="mbox_conf_flatten", **kwargs_flo) # forward of flow5 with confidence and regression
+            net_pos.forward(end="mbox_conf_flatten", **kwargs_pos) # forward of pose with confidence and regression
             
             # compute late fusion of rgb and flow scores (keep regression from rgb)
             # use net_rgb for standard detections, net_flo for having all boxes
             # rgb和flow的score fusion的方式为取两者平均值
-            scores = 0.5 * (net_rgb.blobs['mbox_conf_flatten'].data + net_flo.blobs['mbox_conf_flatten'].data)
+            #scores = 0.5 * (net_rgb.blobs['mbox_conf_flatten'].data + net_flo.blobs['mbox_conf_flatten'].data)
+            scores = (net_rgb.blobs['mbox_conf_flatten'].data + net_flo.blobs['mbox_conf_flatten'].data + net_pos.blobs['mbox_conf_flatten'].data) / 3.0
             net_rgb.blobs['mbox_conf_flatten'].data[...] = scores
             net_flo.blobs['mbox_conf_flatten'].data[...] = scores
+            net_pso.blobs['mbox_conf_flatten'].data[...] = scores
             #这里保留来自rgb的regression
             net_flo.blobs['mbox_loc'].data[...] = net_rgb.blobs['mbox_loc'].data
             
