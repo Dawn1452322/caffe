@@ -15,7 +15,7 @@ layer {
   python_param {
     module: "ACT_datalayer"
     layer: "MultiframesLayer"
-    param_str: "{\"dataset_name\": \"JHMDB3\", \"K\": 6, \"batch_size\": 5, \"resize_height\": 300, \"resize_width\": 300, \"restart_iter\": 0, \"flow\": False, \"ninput\": 1}"
+    param_str: "{\"dataset_name\": \"JHMDB3\", \"K\": 6, \"batch_size\": 5, \"resize_height\": 300, \"resize_width\": 300, \"restart_iter\": 0, \"imtype\": 0, \"ninput\": 1}"
   }
 }
 layer {
