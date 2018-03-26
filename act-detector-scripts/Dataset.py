@@ -100,6 +100,9 @@ class JHMDB(TubeDataset):
 
     def flowfile(self, v, i):
         return os.path.join(ROOT_DATASET_PATH, "JHMDB", "FlowBrox04", v, "{:0>5}.jpg".format(i))
+    
+    def segfile（self, v, i):
+        return os.path.join(ROOT_DATASET_PATH, "JHMDB", "Poses", v, "{:0>5}.png".format(i))
 
     def frame_format(self, v, i):
         return os.path.join(v, "{:0>5}".format(i))
