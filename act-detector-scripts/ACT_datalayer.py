@@ -91,7 +91,7 @@ def random_saturation(imglist, saturation_prob, saturation_lower, saturation_upp
     if random.random() < saturation_prob:
         satu = random.uniform(saturation_lower, saturation_upper)
         for i in xrange(len(imglist)):
-            hsv = cv2.cvtColor(imglist[i], cv2.COLOR_BGR2HSV)
+            hsv = cv2.cvtColor(imglist[i], cv2.COLOR_BGR2HSV)
             hsv[:, :, 1] *= satu
             imglist[i] = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
