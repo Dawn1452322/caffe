@@ -117,6 +117,9 @@ class UCF101(TubeDataset):
 
     def flowfile(self, v, i):
         return os.path.join(ROOT_DATASET_PATH, "UCF101", "FlowBrox04", v, "{:0>5}.jpg".format(i))
+    
+    def segfile(self, v ,i):
+        return os.path.join(ROOT_DATASET_PATH, "UCF101", "Poses", v, "{:0>5}.jpg".format(i))
 
     def frame_format(self, v, i):
         return os.path.join(v, "{:0>5}".format(i))
