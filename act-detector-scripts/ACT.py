@@ -149,7 +149,8 @@ def extract_tubelets(dname, gpu=-1, redo=False):
             
             # save file
             if not os.path.isdir(os.path.dirname(outfile)):
-                os.system('mkdir -p ' + os.path.dirname(outfile))
+                #os.system('mkdir -p ' + os.path.dirname(outfile))
+                os.makedirs(os.path.dirname(outfile))
 
             with open(outfile, 'wb') as fid:
                 pickle.dump((dets, dets_all), fid)
