@@ -639,7 +639,7 @@ def videoAP(dname, th=0.5, redo=False):
 
     # display results
     ap = 100 * np.array([pr_to_ap(res[label]) for label in d.labels])
-    print "frameAP"
+    print "videoAP"
     for il, l in enumerate(d.labels):
         print("{:20s} {:8.2f}".format(l, ap[il]))
 
